@@ -44,6 +44,8 @@ class RaySampler(torch.nn.Module):
         uv = uv.flip(0).reshape(2, -1).transpose(1, 0)
         uv = uv.unsqueeze(0).repeat(cam2world_matrix.shape[0], 1, 1)
 
+        # print('uv: ', uv)
+
         x_cam = uv[:, :, 0].view(N, -1)
         y_cam = uv[:, :, 1].view(N, -1)
         z_cam = torch.ones((N, M), device=cam2world_matrix.device)

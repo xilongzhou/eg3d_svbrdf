@@ -18,6 +18,9 @@ import json
 import torch
 import dnnlib
 
+from torch_utils.render import render, set_param, getTexPos, height_to_normal
+
+
 try:
     import pyspng
 except ImportError:
@@ -36,6 +39,7 @@ class Dataset(torch.utils.data.Dataset):
     ):
         self._name = name
         self._raw_shape = list(raw_shape)
+        print('raw shape: ', self._raw_shape, raw_shape)
         self._use_labels = use_labels
         self._raw_labels = None
         self._label_shape = None
@@ -95,6 +99,7 @@ class Dataset(torch.utils.data.Dataset):
         if self._xflip[idx]:
             assert image.ndim == 3 # CHW
             image = image[:, :, ::-1]
+
         return image.copy(), self.get_label(idx)
 
     def get_label(self, idx):
@@ -103,6 +108,7 @@ class Dataset(torch.utils.data.Dataset):
             onehot = np.zeros(self.label_shape, dtype=np.float32)
             onehot[label] = 1
             label = onehot
+
         return label.copy()
 
     def get_details(self, idx):
@@ -131,7 +137,7 @@ class Dataset(torch.utils.data.Dataset):
     @property
     def resolution(self):
         assert len(self.image_shape) == 3 # CHW
-        assert self.image_shape[1] == self.image_shape[2]
+        # assert self.image_shape[1] == self.image_shape[2] 
         return self.image_shape[1]
 
     @property
@@ -142,6 +148,7 @@ class Dataset(torch.utils.data.Dataset):
                 self._label_shape = [int(np.max(raw_labels)) + 1]
             else:
                 self._label_shape = raw_labels.shape[1:]
+
         return list(self._label_shape)
 
     @property
@@ -184,6 +191,7 @@ class ImageFolderDataset(Dataset):
 
         name = os.path.splitext(os.path.basename(self._path))[0]
         raw_shape = [len(self._image_fnames)] + list(self._load_raw_image(0).shape)
+        print('resolution: ', resolution)
         if resolution is not None and (raw_shape[2] != resolution or raw_shape[3] != resolution):
             raise IOError('Image files do not match the specified resolution')
         super().__init__(name=name, raw_shape=raw_shape, **super_kwargs)
@@ -229,6 +237,9 @@ class ImageFolderDataset(Dataset):
 
     def _load_raw_labels(self):
         fname = 'dataset.json'
+        # my revision
+        return np.random.normal(0,1,(self._raw_shape[0],25)).astype(np.float32)
+
         if fname not in self._all_fnames:
             return None
         with self._open_file(fname) as f:
@@ -241,4 +252,131 @@ class ImageFolderDataset(Dataset):
         labels = labels.astype({1: np.int64, 2: np.float32}[labels.ndim])
         return labels
 
+#----------------------------------------------------------------------------
+
+class SVBRDFDataset(Dataset):
+    def __init__(self,
+        path,                   # Path to directory or zip.
+        resolution      = None, # Ensure specific resolution, None = highest available.
+        **super_kwargs,         # Additional arguments for the Dataset base class.
+    ):
+        self._path = path
+        self._zipfile = None
+
+        if os.path.isdir(self._path):
+            self._type = 'dir'
+            self._all_fnames = {os.path.relpath(os.path.join(root, fname), start=self._path) for root, _dirs, files in os.walk(self._path) for fname in files}
+        elif self._file_ext(self._path) == '.zip':
+            self._type = 'zip'
+            self._all_fnames = set(self._get_zipfile().namelist())
+        else:
+            raise IOError('Path must point to a directory or zip')
+
+        PIL.Image.init()
+        self._image_fnames = sorted(fname for fname in self._all_fnames if self._file_ext(fname) in PIL.Image.EXTENSION)
+        if len(self._image_fnames) == 0:
+            raise IOError('No image files found in the specified path')
+
+        name = os.path.splitext(os.path.basename(self._path))[0]
+
+        raw_shape = [len(self._image_fnames)] + list(self._load_raw_image(0).shape)
+        
+        # hard code some params
+        self._raw_labels_std = 0.0
+
+        # light, light_pos, size = set_param('cuda')
+        # self.tex_pos = getTexPos(256, size, 'cuda').unsqueeze(0)
+
+        # if resolution is not None and (raw_shape[2] != resolution or raw_shape[3] != resolution):
+        #     raise IOError('Image files do not match the specified resolution')
+        super().__init__(name=name, raw_shape=raw_shape, **super_kwargs)
+
+    @staticmethod
+    def _file_ext(fname):
+        return os.path.splitext(fname)[1].lower()
+
+    def _get_zipfile(self):
+        assert self._type == 'zip'
+        if self._zipfile is None:
+            self._zipfile = zipfile.ZipFile(self._path)
+        return self._zipfile
+
+    def _open_file(self, fname):
+        if self._type == 'dir':
+            return open(os.path.join(self._path, fname), 'rb')
+        if self._type == 'zip':
+            return self._get_zipfile().open(fname, 'r')
+        return None
+
+    def close(self):
+        try:
+            if self._zipfile is not None:
+                self._zipfile.close()
+        finally:
+            self._zipfile = None
+
+    def __getstate__(self):
+        return dict(super().__getstate__(), _zipfile=None)
+
+    def __getitem__(self, idx):
+
+        # render
+        image = self._load_raw_image(self._raw_idx[idx])
+        # print('svbrdf img shape: ', image)
+        image = image[:,:,0:512]
+
+        assert isinstance(image, np.ndarray)
+        assert image.dtype == np.uint8
+        if self._xflip[idx]:
+            assert image.ndim == 3 # CHW
+            image = image[:, :, ::-1]
+
+        return image.copy(), self.get_label(idx)
+
+    def _load_raw_image(self, raw_idx):
+        fname = self._image_fnames[raw_idx]
+        with self._open_file(fname) as f:
+            img_pil = PIL.Image.open(f)
+            image = np.array(img_pil)
+        if image.ndim == 2:
+            image = image[:, :, np.newaxis] # HW => HWC
+        image = image.transpose(2, 0, 1) # HWC => CHW
+        return image
+
+    def get_label(self, idx):
+        return self._rand_light()
+
+
+    def _load_raw_labels(self): # to be overridden by subclass
+        return
+
+    def _rand_light(self):
+        xy = np.random.normal(0,1,(2))
+        # z = np.sqrt(1 - xy[0]*xy[0] - xy[1]*xy[1])
+
+        light_pos = np.array([xy[0], xy[1], 1])*4.0
+
+        return light_pos
+
+    # hard code light pos as label
+    @property
+    def label_shape(self):
+        return [3]
+
+    @property
+    def has_labels(self):
+        return True
+
+    @property
+    def resolution(self):
+        return 256
+
+
+    @property
+    def image_shape(self):
+        return [3,256,256]
+
+    @property
+    def num_channels(self):
+        return 3
 #----------------------------------------------------------------------------

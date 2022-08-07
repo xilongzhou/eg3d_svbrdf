@@ -104,9 +104,9 @@ def launch_training(c, desc, outdir, dry_run):
 
 #----------------------------------------------------------------------------
 
-def init_dataset_kwargs(data):
+def init_dataset_kwargs(data, svbrdf=False):
     try:
-        dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=data, use_labels=True, max_size=None, xflip=False)
+        dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset' if not svbrdf else 'training.dataset.SVBRDFDataset', path=data, use_labels=True, max_size=None, xflip=False)
         dataset_obj = dnnlib.util.construct_class_by_name(**dataset_kwargs) # Subclass of training.dataset.Dataset.
         dataset_kwargs.resolution = dataset_obj.resolution # Be explicit about resolution.
         dataset_kwargs.use_labels = dataset_obj.has_labels # Be explicit about labels.
@@ -193,6 +193,8 @@ def parse_comma_separated_list(s):
 @click.option('--reg_type', help='Type of regularization', metavar='STR',  type=click.Choice(['l1', 'l1-alt', 'monotonic-detach', 'monotonic-fixed', 'total-variation']), required=False, default='l1')
 @click.option('--decoder_lr_mul',    help='decoder learning rate multiplier.', metavar='FLOAT', type=click.FloatRange(min=0), default=1, required=False, show_default=True)
 
+@click.option('--svbrdf', help='svbrdf or not', metavar='BOOL',  type=bool, required=False, default=False)
+
 def main(**kwargs):
     """Train a GAN using the techniques described in the paper
     "Alias-Free Generative Adversarial Networks".
@@ -227,7 +229,8 @@ def main(**kwargs):
     c.data_loader_kwargs = dnnlib.EasyDict(pin_memory=True, prefetch_factor=2)
 
     # Training set.
-    c.training_set_kwargs, dataset_name = init_dataset_kwargs(data=opts.data)
+    c.training_set_kwargs, dataset_name = init_dataset_kwargs(data=opts.data, svbrdf=opts.svbrdf)
+    print('training_set_kwargs: ', c.training_set_kwargs)
     if opts.cond and not c.training_set_kwargs.use_labels:
         raise click.ClickException('--cond=True requires labels specified in dataset.json')
     c.training_set_kwargs.use_labels = opts.cond
@@ -265,10 +268,11 @@ def main(**kwargs):
     # Base configuration.
     c.ema_kimg = c.batch_size * 10 / 32
     c.G_kwargs.class_name = 'training.triplane.TriPlaneGenerator'
-    c.D_kwargs.class_name = 'training.dual_discriminator.DualDiscriminator'
+    c.D_kwargs.class_name = 'training.dual_discriminator.DualDiscriminator' if not opts.svbrdf else 'training.networks_stylegan2.Discriminator'
     c.G_kwargs.fused_modconv_default = 'inference_only' # Speed up training by using regular convolutions instead of grouped convolutions.
     c.loss_kwargs.filter_mode = 'antialiased' # Filter mode for raw images ['antialiased', 'none', float [0-1]]
     c.D_kwargs.disc_c_noise = opts.disc_c_noise # Regularization for discriminator pose conditioning
+    c.G_kwargs.svbrdf = opts.svbrdf # Blur the images seen by the discriminator.
 
     if c.training_set_kwargs.resolution == 512:
         sr_module = 'training.superresolution.SuperresolutionHybrid8XDC'
@@ -341,9 +345,10 @@ def main(**kwargs):
     c.loss_kwargs.blur_init_sigma = 10 # Blur the images seen by the discriminator.
     c.loss_kwargs.blur_fade_kimg = c.batch_size * opts.blur_fade_kimg / 32 # Fade out the blur during the first N kimg.
 
+
     c.loss_kwargs.gpc_reg_prob = opts.gpc_reg_prob if opts.gen_pose_cond else None
     c.loss_kwargs.gpc_reg_fade_kimg = opts.gpc_reg_fade_kimg
-    c.loss_kwargs.dual_discrimination = True
+    c.loss_kwargs.dual_discrimination = True if not opts.svbrdf else False
     c.loss_kwargs.neural_rendering_resolution_initial = opts.neural_rendering_resolution_initial
     c.loss_kwargs.neural_rendering_resolution_final = opts.neural_rendering_resolution_final
     c.loss_kwargs.neural_rendering_resolution_fade_kimg = opts.neural_rendering_resolution_fade_kimg

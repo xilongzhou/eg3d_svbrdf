@@ -61,6 +61,7 @@ def sample_from_planes(plane_axes, plane_features, coordinates, mode='bilinear',
     coordinates = (2/box_warp) * coordinates # TODO: add specific box bounds
 
     projected_coordinates = project_onto_planes(plane_axes, coordinates).unsqueeze(1)
+    print('sample plane fea: ', plane_features.shape, 'projected_coordinates: ', projected_coordinates.shape )
     output_features = torch.nn.functional.grid_sample(plane_features, projected_coordinates.float(), mode=mode, padding_mode=padding_mode, align_corners=False).permute(0, 3, 2, 1).reshape(N, n_planes, M, C)
     return output_features
 
@@ -104,6 +105,7 @@ class ImportanceRenderer(torch.nn.Module):
         # Coarse Pass
         sample_coordinates = (ray_origins.unsqueeze(-2) + depths_coarse * ray_directions.unsqueeze(-2)).reshape(batch_size, -1, 3)
         sample_directions = ray_directions.unsqueeze(-2).expand(-1, -1, samples_per_ray, -1).reshape(batch_size, -1, 3)
+        print('sample_coordinates: ', sample_coordinates.shape, 'sample_directions: ',sample_directions.shape)
 
 
         out = self.run_model(planes, decoder, sample_coordinates, sample_directions, rendering_options)
@@ -111,6 +113,7 @@ class ImportanceRenderer(torch.nn.Module):
         densities_coarse = out['sigma']
         colors_coarse = colors_coarse.reshape(batch_size, num_rays, samples_per_ray, colors_coarse.shape[-1])
         densities_coarse = densities_coarse.reshape(batch_size, num_rays, samples_per_ray, 1)
+        print('colors_coarse: ', colors_coarse.shape, 'densities_coarse: ',densities_coarse.shape)
 
         # Fine Pass
         N_importance = rendering_options['depth_resolution_importance']
@@ -127,21 +130,27 @@ class ImportanceRenderer(torch.nn.Module):
             densities_fine = out['sigma']
             colors_fine = colors_fine.reshape(batch_size, num_rays, N_importance, colors_fine.shape[-1])
             densities_fine = densities_fine.reshape(batch_size, num_rays, N_importance, 1)
+            print('importance colors_fine: ', colors_fine.shape, 'densities_fine: ',densities_fine.shape)
 
             all_depths, all_colors, all_densities = self.unify_samples(depths_coarse, colors_coarse, densities_coarse,
                                                                   depths_fine, colors_fine, densities_fine)
+            print('all_colors: ', all_colors.shape, 'all_depths: ',all_depths.shape, 'all_densities: ',all_densities.shape)
 
             # Aggregate
             rgb_final, depth_final, weights = self.ray_marcher(all_colors, all_densities, all_depths, rendering_options)
         else:
             rgb_final, depth_final, weights = self.ray_marcher(colors_coarse, densities_coarse, depths_coarse, rendering_options)
 
+        print('rgb_final: ', rgb_final.shape, 'depth_final: ',depth_final.shape)
 
         return rgb_final, depth_final, weights.sum(2)
 
-    def run_model(self, planes, decoder, sample_coordinates, sample_directions, options):
-        sampled_features = sample_from_planes(self.plane_axes, planes, sample_coordinates, padding_mode='zeros', box_warp=options['box_warp'])
 
+
+    def run_model(self, planes, decoder, sample_coordinates, sample_directions, options):
+        print('planes in run model: ', planes.shape)
+        sampled_features = sample_from_planes(self.plane_axes, planes, sample_coordinates, padding_mode='zeros', box_warp=options['box_warp'])
+        print('sampled features in run model: ', sampled_features.shape)
         out = decoder(sampled_features, sample_directions)
         if options.get('density_noise', 0) > 0:
             out['sigma'] += torch.randn_like(out['sigma']) * options['density_noise']

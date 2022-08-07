@@ -238,6 +238,7 @@ class MappingNetwork(torch.nn.Module):
                 misc.assert_shape(z, [None, self.z_dim])
                 x = normalize_2nd_moment(z.to(torch.float32))
             if self.c_dim > 0:
+                print('mapping c: ',c.shape, self.c_dim)
                 misc.assert_shape(c, [None, self.c_dim])
                 y = normalize_2nd_moment(self.embed(c.to(torch.float32)))
                 x = torch.cat([x, y], dim=1) if x is not None else y
@@ -747,6 +748,8 @@ class Discriminator(torch.nn.Module):
         block_kwargs        = {},       # Arguments for DiscriminatorBlock.
         mapping_kwargs      = {},       # Arguments for MappingNetwork.
         epilogue_kwargs     = {},       # Arguments for DiscriminatorEpilogue.
+        disc_c_noise        = 0,        # Corrupt camera parameters with X std dev of noise before disc. pose conditioning.
+
     ):
         super().__init__()
         self.c_dim = c_dim
@@ -787,6 +790,7 @@ class Discriminator(torch.nn.Module):
         cmap = None
         if self.c_dim > 0:
             cmap = self.mapping(None, c)
+
         x = self.b4(x, img, cmap)
         return x
 
