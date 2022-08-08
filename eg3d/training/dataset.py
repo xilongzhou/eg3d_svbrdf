@@ -371,7 +371,6 @@ class SVBRDFDataset(Dataset):
         rand_light = np.concatenate((x,y,z),axis=0)
 
         light_pos = rand_light * 4
-        print('light pos: ', light_pos)
 
         return light_pos
 
