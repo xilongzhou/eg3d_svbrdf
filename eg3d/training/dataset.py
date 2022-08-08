@@ -358,12 +358,12 @@ class SVBRDFDataset(Dataset):
         return
 
     def _rand_light(self):
-        u_1 = np.random.normal(0,0.2,(1))
+        u_1 = np.abs(np.random.normal(0,0.2,(1)))
         u_2 = np.random.uniform(0,1,(1))
 
         r = np.sqrt(u_1)
 
-        z = torch.sqrt(1-r*r)
+        z = np.sqrt(1-r*r)
         x = r*torch.cos(u_2)
         y = r*torch.sin(u_2)
 
