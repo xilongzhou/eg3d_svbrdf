@@ -54,10 +54,10 @@ class TriPlaneGenerator(torch.nn.Module):
 
     def synthesis(self, ws, c, neural_rendering_resolution=None, update_emas=False, cache_backbone=False, use_cached_backbone=False, **synthesis_kwargs):
 
-        print('...................', self.svbrdf)
+        # print('...................', self.svbrdf)
         if self.svbrdf:
-            print('SVBRDF rendering')
-            print('c.shape: ', c.shape)
+            # print('SVBRDF rendering')
+            # print('c.shape: ', c.shape)
 
             # Create Single Plane featuer maps for SVBRDF by running StyleGAN backbone
             N, _ = c.shape
@@ -71,10 +71,10 @@ class TriPlaneGenerator(torch.nn.Module):
             # Reshape output into three 32-channel planes
             planes = planes.view(len(planes), 32, planes.shape[-2], planes.shape[-1])
             planes = planes.permute(0,2,3,1).view(len(planes), -1, 32).contiguous()
-            print('planes: ', planes.shape)
+            # print('planes: ', planes.shape)
 
             feature_samples = self.decoder(planes, None)
-            print('feature_samples: ', feature_samples.shape)
+            # print('feature_samples: ', feature_samples.shape)
 
             rgb_image = feature_samples.permute(0, 2, 1).reshape(N, feature_samples.shape[-1], 256, 256).contiguous()
 
@@ -187,13 +187,13 @@ class OSGDecoder(torch.nn.Module):
         if self.svbrdf:
             # Aggregate features
             x = sampled_features
-            print('1: ',x.shape)
+            # print('1: ',x.shape)
             N, M, C = x.shape
             x = x.view(N*M, C)
-            print('2: ',x.shape)
+            # print('2: ',x.shape)
 
             x = self.net(x)
-            print('3: ',x.shape)
+            # print('3: ',x.shape)
             x = x.view(N, M, -1)
             rgb = torch.sigmoid(x)*(1 + 2*0.001) - 0.001 # Uses sigmoid clamping from MipNeRF
             return rgb         

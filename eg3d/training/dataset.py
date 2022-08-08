@@ -18,8 +18,6 @@ import json
 import torch
 import dnnlib
 
-from torch_utils.render import render, set_param, getTexPos, height_to_normal
-
 
 try:
     import pyspng
@@ -323,7 +321,16 @@ class SVBRDFDataset(Dataset):
         # render
         image = self._load_raw_image(self._raw_idx[idx])
         # print('svbrdf img shape: ', image)
-        image = image[:,:,0:512]
+        _,h,_ = image.shape
+        H = image[0:1,:,0:h]
+        D = image[:,:,h:2*h]
+        R = image[0:1,:,2*h:3*h]
+
+        image = np.concatenate((H,D,R), axis=0)
+        # print('img 1 : ', image.shape)
+        # image = torch.nn.functional.interpolate(torch.from_numpy(image).unsqueeze(0), size=(256, 256), mode='bilinear', align_corners=False, antialias=True).squeeze(0).numpy()
+        # print('img 2 : ', image.shape)
+
 
         assert isinstance(image, np.ndarray)
         assert image.dtype == np.uint8
