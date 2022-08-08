@@ -111,7 +111,7 @@ def save_image_grid(img, fname, drange, grid_size, light_pos, device):
 
 
         lo, hi = drange
-        rens = np.asarray(rens, dtype=np.float32)
+        rens = np.asarray(rens.cpu(), dtype=np.float32)
         rens = (rens - lo) * (255 / (hi - lo))
         rens = np.rint(rens).clip(0, 255).astype(np.uint8)
 
