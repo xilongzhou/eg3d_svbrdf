@@ -97,7 +97,7 @@ def save_image_grid(img, fname, drange, grid_size, light_pos, device):
         ##### add Rendering here #############
         img = torch.from_numpy(img).to(device)/255.
         light_pos = torch.from_numpy(light_pos).to(device).unsqueeze(-1).unsqueeze(-1)
-        # img = torch.nn.functional.interpolate(img, size=(256, 256), mode='bilinear', align_corners=False, antialias=True)
+        img = torch.nn.functional.interpolate(img, size=(256, 256), mode='bilinear', align_corners=False, antialias=True)
 
         print('img, lightpos: ',img.shape, light_pos.shape)
         light, _, size = set_param(device)

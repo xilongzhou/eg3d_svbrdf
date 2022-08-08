@@ -327,9 +327,9 @@ class SVBRDFDataset(Dataset):
         R = image[0:1,:,2*h:3*h]
 
         image = np.concatenate((H,D,R), axis=0)
-        print('img 1 : ', image.shape)
-        image = torch.nn.functional.interpolate(torch.from_numpy(image).unsqueeze(0), size=(256, 256), mode='bilinear', align_corners=False, antialias=True).squeeze(0).numpy()
-        print('img 2 : ', image.shape)
+        # print('img 1 : ', image.shape)
+        # image = torch.nn.functional.interpolate(torch.from_numpy(image).unsqueeze(0), size=(256, 256), mode='bilinear', align_corners=False, antialias=True).squeeze(0).numpy()
+        # print('img 2 : ', image.shape)
 
 
         assert isinstance(image, np.ndarray)
