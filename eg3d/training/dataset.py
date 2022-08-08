@@ -358,29 +358,29 @@ class SVBRDFDataset(Dataset):
         return
 
     def _rand_light(self):
-        # xy = np.random.normal(0,1,(2))
-        # light_pos = np.array([xy[0], xy[1], 1])*4.0
-        # return light_pos
-
-        u_1= torch.abs(torch.randn((1))*0.05).clamp(0,0.1)  # rmax: 0.95 (default)
-        u_2= torch.rand((1))
-
-        r = torch.sqrt(u_1)
-        theta = 2*np.pi*u_2
-
-        x = r*torch.cos(theta)
-        y = r*torch.sin(theta)
-        z = torch.sqrt(1-r*r)
-
-        rand_light = torch.cat([x,y,z],0)
-
-        # dist = 4.0 ** torch.normal(torch.tensor([1.0]), torch.tensor([0.3]))
-        dist = 4.0 ** torch.empty(1).normal_(mean=1.0, std=0.2)
-
-        light_pos = rand_light * dist.cuda()
-        print('light pos: ', light_pos)
-
+        xy = np.random.normal(0,1,(2))
+        light_pos = np.array([xy[0], xy[1], 1])*4.0
         return light_pos
+
+        # u_1= torch.abs(torch.randn((1))*0.05).clamp(0,0.1)  # rmax: 0.95 (default)
+        # u_2= torch.rand((1))
+
+        # r = torch.sqrt(u_1)
+        # theta = 2*np.pi*u_2
+
+        # x = r*torch.cos(theta)
+        # y = r*torch.sin(theta)
+        # z = torch.sqrt(1-r*r)
+
+        # rand_light = torch.cat([x,y,z],0)
+
+        # # dist = 4.0 ** torch.normal(torch.tensor([1.0]), torch.tensor([0.3]))
+        # dist = 4.0 ** torch.empty(1).normal_(mean=1.0, std=0.2)
+
+        # light_pos = rand_light * dist.cuda()
+        # print('light pos: ', light_pos)
+
+        # return light_pos
 
 
     # hard code light pos as label
