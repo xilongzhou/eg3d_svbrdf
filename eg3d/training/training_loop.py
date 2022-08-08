@@ -333,7 +333,7 @@ def training_loop(
      
                 N = height_to_normal(real_img[:,0:1,:,:], size=size)
                 real_img = torch.cat((N, real_img[:,1:4,:,:]**2.2, real_img[:,4:5,:,:].repeat(1,3,1,1)), dim=1)
-                real_img = render(real_img, tex_pos, light, real_c, isMetallic=False, no_decay=False) #[0,1]
+                real_img = render(real_img, tex_pos, light, real_c.unsqueeze(-1).unsqueeze(-1), isMetallic=False, no_decay=False) #[0,1]
                 print('real_img: ', real_img.shape)
                 
                 real_img = real_img*2-1 #[0,1] --> [-1,1]
