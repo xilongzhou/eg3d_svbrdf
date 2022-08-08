@@ -73,7 +73,7 @@ def setup_snapshot_image_grid(training_set, random_seed=0):
 
 #----------------------------------------------------------------------------
 
-def save_image_grid(img, fname, drange, grid_size, light_pos, device):
+def save_image_grid(img, fname, drange, grid_size, light_pos=None, device=None):
 
     if img.shape[1]==3:
         lo, hi = drange
@@ -329,15 +329,11 @@ def training_loop(
                 ## resize + rendering here
                 real_img = real_img*0.5+0.5 #[-1,1] --> [0,1]
                 real_img = torch.nn.functional.interpolate(real_img, size=(256, 256), mode='bilinear', align_corners=False, antialias=True)
-                print('real_img, lightpos: ',real_img.shape, real_c.shape)
      
                 N = height_to_normal(real_img[:,0:1,:,:], size=size)
                 real_img = torch.cat((N, real_img[:,1:4,:,:]**2.2, real_img[:,4:5,:,:].repeat(1,3,1,1)), dim=1)
-                real_img = render(real_img, tex_pos, light, real_c.unsqueeze(-1).unsqueeze(-1), isMetallic=False, no_decay=False) #[0,1]
-                print('real_img: ', real_img.shape)
-                
+                real_img = render(real_img, tex_pos, light, real_c.unsqueeze(-1).unsqueeze(-1), isMetallic=False, no_decay=False) #[0,1]                
                 real_img = real_img*2-1 #[0,1] --> [-1,1]
-
 
                 loss.accumulate_gradients(phase=phase.name, real_img=real_img, real_c=real_c, gen_z=gen_z, gen_c=gen_c, gain=phase.interval, cur_nimg=cur_nimg)
             phase.module.requires_grad_(False)
