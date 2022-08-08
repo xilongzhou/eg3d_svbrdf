@@ -358,7 +358,7 @@ class SVBRDFDataset(Dataset):
         return
 
     def _rand_light(self):
-        u_1 = np.abs(np.random.normal(0,0.2,(1)))
+        u_1 = np.abs(np.random.normal(0,0.05,(1)))
         u_2 = np.random.uniform(0,1,(1))
         theta = 2*np.pi*u_2
 
