@@ -360,12 +360,13 @@ class SVBRDFDataset(Dataset):
     def _rand_light(self):
         u_1 = np.abs(np.random.normal(0,0.2,(1)))
         u_2 = np.random.uniform(0,1,(1))
+        theta = 2*np.pi*u_2
 
         r = np.sqrt(u_1)
 
         z = np.sqrt(1-r*r)
-        x = r*np.cos(u_2)
-        y = r*np.sin(u_2)
+        x = r*np.cos(theta)
+        y = r*np.sin(theta)
 
         rand_light = np.concatenate((x,y,z),axis=0)
 
