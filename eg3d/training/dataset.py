@@ -364,12 +364,13 @@ class SVBRDFDataset(Dataset):
         r = np.sqrt(u_1)
 
         z = np.sqrt(1-r*r)
-        x = r*torch.cos(u_2)
-        y = r*torch.sin(u_2)
+        x = r*np.cos(u_2)
+        y = r*np.sin(u_2)
 
         rand_light = np.concatenate((x,y,z),axis=0)
 
         light_pos = rand_light * 4
+        print('light pos: ', light_pos)
 
         return light_pos
 
