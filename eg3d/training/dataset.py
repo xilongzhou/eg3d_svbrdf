@@ -256,6 +256,7 @@ class SVBRDFDataset(Dataset):
     def __init__(self,
         path,                   # Path to directory or zip.
         resolution      = None, # Ensure specific resolution, None = highest available.
+        use_tripla      = False, # use triplane for svbrdf or not.
         **super_kwargs,         # Additional arguments for the Dataset base class.
     ):
         self._path = path
@@ -281,12 +282,8 @@ class SVBRDFDataset(Dataset):
         
         # hard code some params
         self._raw_labels_std = 0.0
+        self._use_tripla = use_tripla
 
-        # light, light_pos, size = set_param('cuda')
-        # self.tex_pos = getTexPos(256, size, 'cuda').unsqueeze(0)
-
-        # if resolution is not None and (raw_shape[2] != resolution or raw_shape[3] != resolution):
-        #     raise IOError('Image files do not match the specified resolution')
         super().__init__(name=name, raw_shape=raw_shape, **super_kwargs)
 
     @staticmethod
@@ -320,17 +317,12 @@ class SVBRDFDataset(Dataset):
 
         # render
         image = self._load_raw_image(self._raw_idx[idx])
-        # print('svbrdf img shape: ', image)
+
         _,h,_ = image.shape
         H = image[0:1,:,0:h]
         D = image[:,:,h:2*h]
         R = image[0:1,:,2*h:3*h]
-
         image = np.concatenate((H,D,R), axis=0)
-        # print('img 1 : ', image.shape)
-        # image = torch.nn.functional.interpolate(torch.from_numpy(image).unsqueeze(0), size=(256, 256), mode='bilinear', align_corners=False, antialias=True).squeeze(0).numpy()
-        # print('img 2 : ', image.shape)
-
 
         assert isinstance(image, np.ndarray)
         assert image.dtype == np.uint8
@@ -351,7 +343,11 @@ class SVBRDFDataset(Dataset):
         return image
 
     def get_label(self, idx):
-        return self._rand_light()
+        if self._use_tripla:
+            # construct a 25 dim conditional label corresponding to 3 light pos
+            return np.random.normal(0,1,(self._raw_shape[0],25)).astype(np.float32)
+        else:
+            return self._rand_light()
 
 
     def _load_raw_labels(self): # to be overridden by subclass
@@ -363,24 +359,20 @@ class SVBRDFDataset(Dataset):
         theta = 2*np.pi*u_2
 
         r = np.sqrt(u_1)
-
         z = np.sqrt(1-r*r)
         x = r*np.cos(theta)
         y = r*np.sin(theta)
 
         rand_light = np.concatenate((x,y,z),axis=0)
-
         light_pos = rand_light * 4
-
         return light_pos
 
-        # return light_pos
 
 
     # hard code light pos as label
     @property
     def label_shape(self):
-        return [3]
+        return [3] if not self._use_tripla else [25]
 
     @property
     def has_labels(self):

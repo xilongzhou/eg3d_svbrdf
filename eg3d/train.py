@@ -194,6 +194,7 @@ def parse_comma_separated_list(s):
 @click.option('--decoder_lr_mul',    help='decoder learning rate multiplier.', metavar='FLOAT', type=click.FloatRange(min=0), default=1, required=False, show_default=True)
 
 @click.option('--svbrdf', help='svbrdf or not', metavar='BOOL',  type=bool, required=False, default=False)
+@click.option('--use_tripla', help='use triplane and volume rendering pipieline for SVBRDF', metavar='BOOL',  type=bool, required=False, default=False)
 
 def main(**kwargs):
     """Train a GAN using the techniques described in the paper
@@ -229,7 +230,7 @@ def main(**kwargs):
     c.data_loader_kwargs = dnnlib.EasyDict(pin_memory=True, prefetch_factor=2)
 
     # Training set.
-    c.training_set_kwargs, dataset_name = init_dataset_kwargs(data=opts.data, svbrdf=opts.svbrdf)
+    c.training_set_kwargs, dataset_name = init_dataset_kwargs(data=opts.data, svbrdf=opts.svbrdf, use_tripla=opts.use_tripla)
     print('training_set_kwargs: ', c.training_set_kwargs)
     if opts.cond and not c.training_set_kwargs.use_labels:
         raise click.ClickException('--cond=True requires labels specified in dataset.json')
@@ -268,11 +269,12 @@ def main(**kwargs):
     # Base configuration.
     c.ema_kimg = c.batch_size * 10 / 32
     c.G_kwargs.class_name = 'training.triplane.TriPlaneGenerator'
-    c.D_kwargs.class_name = 'training.dual_discriminator.DualDiscriminator' if not opts.svbrdf else 'training.networks_stylegan2.Discriminator'
+    c.D_kwargs.class_name = 'training.dual_discriminator.DualDiscriminator' if not opts.svbrdf or opts.use_tripla else 'training.networks_stylegan2.Discriminator'
     c.G_kwargs.fused_modconv_default = 'inference_only' # Speed up training by using regular convolutions instead of grouped convolutions.
     c.loss_kwargs.filter_mode = 'antialiased' # Filter mode for raw images ['antialiased', 'none', float [0-1]]
     c.D_kwargs.disc_c_noise = opts.disc_c_noise # Regularization for discriminator pose conditioning
-    c.G_kwargs.svbrdf = opts.svbrdf # Blur the images seen by the discriminator.
+    c.G_kwargs.svbrdf = opts.svbrdf # svbrdf mode for G.
+    c.G_kwargs.use_tripla = opts.use_tripla # svbrdf mode (use or not use tripla) for G.
 
     if c.training_set_kwargs.resolution == 512:
         sr_module = 'training.superresolution.SuperresolutionHybrid8XDC'

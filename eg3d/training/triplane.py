@@ -28,6 +28,7 @@ class TriPlaneGenerator(torch.nn.Module):
         rendering_kwargs    = {},
         sr_kwargs = {},
         svbrdf=False,
+        use_tripla=False,
         **synthesis_kwargs,         # Arguments for SynthesisNetwork.
     ):
         super().__init__()
@@ -44,9 +45,12 @@ class TriPlaneGenerator(torch.nn.Module):
         self.decoder = OSGDecoder(32, {'decoder_lr_mul': rendering_kwargs.get('decoder_lr_mul', 1), 'decoder_output_dim': 32}, svbrdf=svbrdf)
         self.neural_rendering_resolution = 64 if not svbrdf else 256
         self.rendering_kwargs = rendering_kwargs
-        self.svbrdf = svbrdf
         self._last_planes = None
     
+        self.svbrdf = svbrdf
+        self.use_tripla = use_tripla
+
+
     def mapping(self, z, c, truncation_psi=1, truncation_cutoff=None, update_emas=False):
         if self.rendering_kwargs['c_gen_conditioning_zero']:
                 c = torch.zeros_like(c)
@@ -55,7 +59,7 @@ class TriPlaneGenerator(torch.nn.Module):
     def synthesis(self, ws, c, neural_rendering_resolution=None, update_emas=False, cache_backbone=False, use_cached_backbone=False, **synthesis_kwargs):
 
         # print('...................', self.svbrdf)
-        if self.svbrdf:
+        if self.svbrdf and not self.use_tripla:
             # print('SVBRDF rendering')
             # print('c.shape: ', c.shape)
 
