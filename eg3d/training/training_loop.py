@@ -99,13 +99,13 @@ def save_image_grid(img, fname, drange, grid_size, light_pos=None, device=None):
         light_pos = torch.from_numpy(light_pos).to(device).unsqueeze(-1).unsqueeze(-1)
         img = torch.nn.functional.interpolate(img, size=(256, 256), mode='bilinear', align_corners=False, antialias=True)
 
-        print('img, lightpos: ',img.shape, light_pos.shape)
+        # print('img, lightpos: ',img.shape, light_pos.shape)
         light, _, size = set_param(device)
         tex_pos = getTexPos(256, size, device).unsqueeze(0)        
         N = height_to_normal(img[:,0:1,:,:], size=size)
         ren_fea = torch.cat((N, img[:,1:4,:,:]**2.2, img[:,4:5,:,:].repeat(1,3,1,1)), dim=1)
         rens = render(ren_fea, tex_pos, light, light_pos, isMetallic=False, no_decay=False) #[0,1]
-        print('rens: ', rens.shape)
+        # print('rens: ', rens.shape)
 
         rens *= 255
 

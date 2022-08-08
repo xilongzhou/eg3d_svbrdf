@@ -201,13 +201,13 @@ class OSGDecoder(torch.nn.Module):
             # Aggregate features
             sampled_features = sampled_features.mean(1)
             x = sampled_features
-            print('1: ',x.shape)
+            # print('1: ',x.shape)
             N, M, C = x.shape
             x = x.view(N*M, C)
-            print('2: ',x.shape)
+            # print('2: ',x.shape)
 
             x = self.net(x)
-            print('3: ',x.shape)
+            # print('3: ',x.shape)
             x = x.view(N, M, -1)
             rgb = torch.sigmoid(x[..., 1:])*(1 + 2*0.001) - 0.001 # Uses sigmoid clamping from MipNeRF
             sigma = x[..., 0:1]

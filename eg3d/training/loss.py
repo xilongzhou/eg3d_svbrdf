@@ -130,7 +130,6 @@ class StyleGAN2Loss(Loss):
         if phase in ['Gmain', 'Gboth']:
             with torch.autograd.profiler.record_function('Gmain_forward'):
                 gen_img, _gen_ws = self.run_G(gen_z, gen_c, swapping_prob=swapping_prob, neural_rendering_resolution=neural_rendering_resolution)
-                print('gen img: ', gen_img.shape)
                 gen_logits = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma)
                 training_stats.report('Loss/scores/fake', gen_logits)
                 training_stats.report('Loss/signs/fake', gen_logits.sign())
@@ -161,18 +160,15 @@ class StyleGAN2Loss(Loss):
 
             if self.svbrdf:
                 sigma = self.G.sample_mixed(all_coordinates, torch.randn_like(all_coordinates), ws, update_emas=False)
-                print()
                 sigma_initial = sigma[:, :sigma.shape[1]//2]
                 sigma_perturbed = sigma[:, sigma.shape[1]//2:]  
-
-
             else:
                 sigma = self.G.sample_mixed(all_coordinates, torch.randn_like(all_coordinates), ws, update_emas=False)['sigma']
                 sigma_initial = sigma[:, :sigma.shape[1]//2]
                 sigma_perturbed = sigma[:, sigma.shape[1]//2:]
 
-                TVloss = torch.nn.functional.l1_loss(sigma_initial, sigma_perturbed) * self.G.rendering_kwargs['density_reg']
-                TVloss.mul(gain).backward()
+            TVloss = torch.nn.functional.l1_loss(sigma_initial, sigma_perturbed) * self.G.rendering_kwargs['density_reg']
+            TVloss.mul(gain).backward()
 
         # Alternative density regularization
         if phase in ['Greg', 'Gboth'] and self.G.rendering_kwargs.get('density_reg', 0) > 0 and self.G.rendering_kwargs['reg_type'] == 'monotonic-detach':

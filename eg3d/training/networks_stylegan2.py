@@ -238,7 +238,7 @@ class MappingNetwork(torch.nn.Module):
                 misc.assert_shape(z, [None, self.z_dim])
                 x = normalize_2nd_moment(z.to(torch.float32))
             if self.c_dim > 0:
-                print('mapping c: ',c.shape, self.c_dim)
+                # print('mapping c: ',c.shape, self.c_dim)
                 misc.assert_shape(c, [None, self.c_dim])
                 y = normalize_2nd_moment(self.embed(c.to(torch.float32)))
                 x = torch.cat([x, y], dim=1) if x is not None else y
