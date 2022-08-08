@@ -358,8 +358,19 @@ class SVBRDFDataset(Dataset):
         return
 
     def _rand_light(self):
-        xy = np.random.normal(0,1,(2))
-        light_pos = np.array([xy[0], xy[1], 1])*4.0
+        u_1 = np.random.normal(0,0.2,(1))
+        u_2 = np.random.uniform(0,1,(1))
+
+        r = np.sqrt(u_1)
+
+        z = torch.sqrt(1-r*r)
+        x = r*torch.cos(u_2)
+        y = r*torch.sin(u_2)
+
+        rand_light = np.concatenate((x,y,z),axis=0)
+
+        light_pos = rand_light * 4
+
         return light_pos
 
         # u_1= torch.abs(torch.randn((1))*0.05).clamp(0,0.1)  # rmax: 0.95 (default)
