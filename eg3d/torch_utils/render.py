@@ -80,7 +80,7 @@ def getTexPos(res, size, device):
 def render(maps, tex_pos, li_color, camli_pos, gamma=True, device='cuda', isMetallic=False, no_decay=False, amb_li=False):
 
 	assert len(li_color.shape)==4, "dim of the shape of li_color pos should be 4"
-	assert len(camli_pos.shape)==4, "dim of the shape of camlight pos should be 4"
+	assert len(camli_pos.shape)==4, f"dim of the shape of camlight pos {camli_pos.shape} should be 4"
 	assert len(tex_pos.shape)==4, "dim of the shape of position map should be 4"
 	assert len(maps.shape)==4, "dim of the shape of feature map should be 4"
 	assert camli_pos.shape[1]==3, "the 1 channel of position map should be 3"
